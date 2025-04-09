@@ -1,3 +1,5 @@
 flask
-werkzeug
+flask-cors
+python-docx
+PyMuPDF
 gunicorn
