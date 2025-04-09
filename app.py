@@ -1,42 +1,43 @@
-from flask import Flask, request, send_file
-import os
-import subprocess
+from flask import Flask, request, send_file, jsonify
 from werkzeug.utils import secure_filename
+import os
+from docx import Document
+import fitz  # PyMuPDF
+import tempfile
+from flask_cors import CORS
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-CONVERTED_FOLDER = 'converted'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(CONVERTED_FOLDER, exist_ok=True)
+CORS(app)  # Allow frontend JS to access this API
 
-@app.route('/', methods=['GET'])
-def index():
+@app.route('/')
+def home():
     return "PDF to DOCX API is running!"
 
 @app.route('/convert', methods=['POST'])
-def convert_pdf_to_docx():
+def convert_pdf():
     if 'file' not in request.files:
-        return {"error": "No file part"}, 400
+        return jsonify({"error": "No file part in the request"}), 400
 
     file = request.files['file']
+
     if file.filename == '':
-        return {"error": "No selected file"}, 400
-
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
-
-    output_filename = filename.rsplit('.', 1)[0] + '.docx'
-    output_path = os.path.join(CONVERTED_FOLDER, output_filename)
+        return jsonify({"error": "No file selected"}), 400
 
     try:
-        subprocess.run(['libreoffice', '--headless', '--convert-to', 'docx', '--outdir', CONVERTED_FOLDER, filepath], check=True)
-        return send_file(output_path, as_attachment=True)
-    except subprocess.CalledProcessError:
-        return {"error": "Conversion failed"}, 500
-    finally:
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        # Save uploaded file to temp location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
+            file.save(tmp_pdf.name)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+            # Convert PDF to DOCX using fitz (basic placeholder)
+            output_path = tmp_pdf.name.replace('.pdf', '.docx')
+            doc = Document()
+            pdf_file = fitz.open(tmp_pdf.name)
+            for page in pdf_file:
+                text = page.get_text()
+                doc.add_paragraph(text)
+            doc.save(output_path)
+
+        return send_file(output_path, as_attachment=True, download_name="converted.docx")
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
