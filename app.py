@@ -1,7 +1,10 @@
 from flask import Flask, request, send_file, jsonify
-import pdfplumber
-from docx import Document
+from flask_cors import CORS
+from pdf2docx import Converter
 import os
+import uuid
+from flask_cors import CORS
+CORS(app)
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
