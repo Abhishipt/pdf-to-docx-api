@@ -1,4 +1,5 @@
 flask
-flask-cors
+werkzeug
 gunicorn
-pdf2docx
+pdfplumber
+python-docx
