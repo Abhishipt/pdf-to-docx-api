@@ -5,11 +5,9 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 
-# Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Folder for storing uploaded and converted files
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -24,15 +22,13 @@ def convert_pdf_to_docx():
 
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+        return jsonify({'error': 'No selected file'}), 400
 
     try:
-        # Save the uploaded PDF
         unique_filename = f"{uuid.uuid4()}.pdf"
         pdf_path = os.path.join(UPLOAD_FOLDER, secure_filename(unique_filename))
         file.save(pdf_path)
 
-        # Convert to DOCX
         docx_path = pdf_path.replace('.pdf', '.docx')
         cv = Converter(pdf_path)
         cv.convert(docx_path, start=0, end=None)
