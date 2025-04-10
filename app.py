@@ -1,43 +1,51 @@
 from flask import Flask, request, send_file, jsonify
-from werkzeug.utils import secure_filename
-import os
-from docx import Document
-import fitz  # PyMuPDF
-import tempfile
 from flask_cors import CORS
+from pdf2docx import Converter
+import os
+import uuid
 
 app = Flask(__name__)
-CORS(app)  # Allow frontend JS to access this API
+CORS(app)
 
-@app.route('/')
-def home():
-    return "PDF to DOCX API is running!"
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route('/convert', methods=['POST'])
-def convert_pdf():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part in the request"}), 400
+def convert_pdf_to_docx():
+    if 'pdfFile' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
 
-    file = request.files['file']
+    file = request.files['pdfFile']
 
     if file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
+        return jsonify({'error': 'No selected file'}), 400
 
-    try:
-        # Save uploaded file to temp location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
-            file.save(tmp_pdf.name)
+    if file:
+        unique_filename = f"{uuid.uuid4()}.pdf"
+        pdf_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        docx_path = os.path.join(UPLOAD_FOLDER, unique_filename.replace('.pdf', '.docx'))
 
-            # Convert PDF to DOCX using fitz (basic placeholder)
-            output_path = tmp_pdf.name.replace('.pdf', '.docx')
-            doc = Document()
-            pdf_file = fitz.open(tmp_pdf.name)
-            for page in pdf_file:
-                text = page.get_text()
-                doc.add_paragraph(text)
-            doc.save(output_path)
+        file.save(pdf_path)
 
-        return send_file(output_path, as_attachment=True, download_name="converted.docx")
+        try:
+            cv = Converter(pdf_path)
+            cv.convert(docx_path, start=0, end=None)
+            cv.close()
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            return send_file(docx_path, as_attachment=True, download_name='converted.docx')
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+        finally:
+            # Optional: clean up files if needed
+            pass
+
+    return jsonify({'error': 'Unknown error'}), 500
+
+@app.route('/')
+def index():
+    return 'PDF to DOCX API is running.'
+
+if __name__ == '__main__':
+    app.run(debug=True)
