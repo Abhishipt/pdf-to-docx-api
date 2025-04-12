@@ -1,5 +1,5 @@
-
 import threading
+import subprocess
 
 def schedule_file_deletion(file_paths, delay=600):  # 600 seconds = 10 minutes
     def delete_files():
@@ -27,6 +27,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 @app.route('/')
 def index():
     return "PDF to DOCX API is running."
+
+@app.route('/check-libreoffice')
+def check_libreoffice():
+    try:
+        result = subprocess.run(['libreoffice', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return f"LibreOffice check output:<br><pre>{result.stdout or result.stderr}</pre>"
+    except Exception as e:
+        return f"Error checking LibreOffice: {str(e)}"
 
 @app.route('/convert', methods=['POST'])
 def convert_pdf_to_docx():
