@@ -1,5 +1,4 @@
 import threading
-import subprocess
 
 def schedule_file_deletion(file_paths, delay=600):  # 600 seconds = 10 minutes
     def delete_files():
@@ -28,13 +27,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def index():
     return "PDF to DOCX API is running."
 
-@app.route('/check-libreoffice')
-def check_libreoffice():
-    try:
-        result = subprocess.run(['libreoffice', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        return f"LibreOffice check output:<br><pre>{result.stdout or result.stderr}</pre>"
-    except Exception as e:
-        return f"Error checking LibreOffice: {str(e)}"
 
 @app.route('/convert', methods=['POST'])
 def convert_pdf_to_docx():
@@ -50,14 +42,26 @@ def convert_pdf_to_docx():
         pdf_path = os.path.join(UPLOAD_FOLDER, secure_filename(unique_filename))
         file.save(pdf_path)
 
-        docx_path = pdf_path.replace('.pdf', '.docx')
+        # 🚫 Optional: Reject files over 10 MB
+        if os.path.getsize(pdf_path) > 10 * 1024 * 1024:
+            os.remove(pdf_path)
+            return jsonify({'error': 'File too large. Please upload a PDF smaller than 10 MB.'}), 400
 
-        schedule_file_deletion([pdf_path, docx_path], delay=600)  # Auto-delete after 10 min
+        docx_path = pdf_path.replace('.pdf', '.docx')
+        schedule_file_deletion([pdf_path, docx_path], delay=600)
+
+        print(f"📥 Received: {file.filename}")
+        print(f"📄 Size: {os.path.getsize(pdf_path)} bytes")
+        print("🔄 Starting conversion...")
+
+        # Convert PDF to DOCX
         cv = Converter(pdf_path)
         cv.convert(docx_path, start=0, end=None)
         cv.close()
 
+        print("✅ Conversion successful.")
         return send_file(docx_path, as_attachment=True, download_name='converted.docx')
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"❌ Conversion error: {e}")
+        return jsonify({'error': 'Conversion failed. Please try again with a simpler file.'}), 500
