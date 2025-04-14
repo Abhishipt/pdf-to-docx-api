@@ -1,7 +1,7 @@
 
 import threading
 
-def schedule_file_deletion(file_paths, delay=600):  # 600 seconds = 10 minutes
+def schedule_file_deletion(file_paths, delay=60):  # 60 seconds = 1 minutes
     def delete_files():
         for path in file_paths:
             try:
