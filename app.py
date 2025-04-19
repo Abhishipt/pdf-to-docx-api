@@ -44,7 +44,7 @@ def convert_pdf_to_docx():
 
         docx_path = pdf_path.replace('.pdf', '.docx')
 
-        schedule_file_deletion([pdf_path, docx_path], delay=600)  # Auto-delete after 10 min
+        schedule_file_deletion([pdf_path, docx_path], delay=60)  # Auto-delete after 1 min
         cv = Converter(pdf_path)
         cv.convert(docx_path, start=0, end=None)
         cv.close()
